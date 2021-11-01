@@ -1,97 +1,113 @@
 #########################################
-#python script for Master Thesis
+#ANCHOR Python script for Master Thesis
 #Determining Regularization and Simulating the Electron Beam in Non-translational Ptychography
 #Guangyu He 
 #########################################
 
+#ANCHOR import python packages
 import numpy as np
 import math
 import struct
 import os
-
 from matplotlib import pyplot as plt
 
+#ANCHOR import self dependency
 from bin import bin_pack,bin_unpack
-
 
 #########################################
 
-tif_mode = False #False
-image_mode = True #True
-std_beam_mode = False
+#SECTION mode parameters
+tif_mode = False #STUB storing data in tiff image, default: False
 
-defocus_mode = True
+image_mode = True #STUB presenting result in images, default: True
 
+std_beam_mode = False #STUB replace Grillo's probe into standard beam, default: False
 
-loop_mode = False
+defocus_mode = True #STUB using defocus gaussian potential, default: True
 
-if loop_mode:
-    image_mode = False
+loop_mode = False #STUB loop all 9 probes for creating rop data, default: False
+
+if loop_mode:   #ANCHOR in loop mode, image mode is False by default
+    image_mode = False 
     pass
-else:
-    #mat = '++++'
+else:   #ANCHOR if not in loop mode, one needs to specify mat probe and rotation
+
+    #mat = '++++' #NOTE ++++ is not available in this thesis: bad interpolation value
+
     #mat = '-.-.-.+'
     #mat = '-.-.+.+'
     mat = '-.+.-.+'
 
     rotation = 0 #0/-1/-2/-3
+#!SECTION
 
-radius_mat = 100
+#SECTION pre simulation parameters
+pre_sim_mode = True #STUB enable a pre-simulation to obtain values for interpolation, incl. a report of widened beam in txt, default: True
+sim_mode = True #STUB enable a simulation to obtain beam information after interpolation, written in a txt report, default: True
 
-#pre simulation
-pre_sim_mode = True #True
-sim_mode = True #True
-
-if pre_sim_mode | sim_mode:
+if pre_sim_mode | sim_mode: #ANCHOR in either mode, self dependencies are required
     from simulation import pre_simulation,simulation
     from fwhm import fwhm
 else:
     pass
+#!SECTION
 
+#SECTION value parameters
+radius_mat = 100 #STUB determine the central disk of the probe, default: 100
 
-#gaussian potential
-atom_distance = 34#36 #pixel
-rescale_range = math.pi / 4
+#ANCHOR value for gaussian potential
+atom_distance = 34 #STUB define atom distance for simulated object potential, default: 34. 36 is also a possible value
+rescale_range = math.pi / 4 #STUB define the normalization factor of the total gaussian potential, different value may have effect in diffraction scattering, default: math.pi / 4
 
-#force dimension
+#ANCHOR force dimension and interpolation value in program
+#STUB two values are adjusted for all 9 probes
 f_dimension = 144
 f_dimension_interpolate = 32
+#!SECTION
 
-
-
+#SECTION main function
 def main():
     """
     main function
     """
 
-    # load .mat file(freq. distri.)
+    #ANCHOR load .mat file(in freq. distri.)
     value_mat = loadmat('quad'+mat+'pix256.mat')
 
-    # rotation
+    #ANCHOR add a rotation
     value_mat = np.rot90(value_mat,rotation)
 
-    #cut the beam from phase plate
+    #ANCHOR cut the beam from phase plate
+    #STUB default center out of 256x256 is [128,128]
     value_mat_cut = value_mat[128-radius_mat:128+radius_mat,128-radius_mat:128+radius_mat]
 
+    #SECTION pre_simulation block
     if pre_sim_mode:
-        # add an edge to the beam in freq. distri.
+
+        #ANCHOR add an edge to the beam in freq. distri.
         value_pre_edged = add_edge(value_mat_cut,200)
-        #pre_simulation, calculate the width of the beam
+
+        #ANCHOR caluculate f=Aexp(i\phi) before fft, see book
         value_pre_f1 = np.exp((0+1j) * value_pre_edged)
-        #define A as the place of original beam with 1 and outer with zero
+        #ANCHOR define A as the place of original beam with 1 and outer with zero
         value_pre_f = circle(value_pre_f1,radius_mat)
 
-        value_pre_f = np.fft.ifftshift(value_pre_f) #fft and shift to center
-        #ifft, from rec. space to real space
-        value_pre_ifft = np.fft.ifft2(value_pre_f) #ifft
-        value_pre_probe = np.fft.fftshift(value_pre_ifft) #fft and shift to center
+        #ANCHOR ifft shift to center
+        value_pre_f = np.fft.ifftshift(value_pre_f) 
+        #ANCHOR ifft from rec. space to real space
+        value_pre_ifft = np.fft.ifft2(value_pre_f)
+        #ANCHOR shift to center
+        value_pre_probe = np.fft.fftshift(value_pre_ifft)
     
-        # calculate the fwhm of the beam
+        #ANCHOR absolute squared for Intensity
         value_pre_probe_tosimulation = np.abs(value_pre_probe)**2
+        #ANCHOR calculate the fwhm of the beam
         fwhm_pre_probe_pixels = fwhm(value_pre_probe_tosimulation)
 
+        #ANCHOR pre_simulation() returns interpolation values
         Dimension, delta1, delta2 = pre_simulation(value_pre_probe_tosimulation,radius_mat,fwhm_pre_probe_pixels,mat) #m2
 
+        #SECTION adjustment for interpolation values
         if Dimension % 2 != 0:
             Dimension = Dimension + 1
         else:
@@ -108,54 +124,68 @@ def main():
             Dim_interpolate = Dim_interpolate + 1
         else:
             pass
+        #!SECTION
     else:
         pass
+    #!SECTION
 
+    #ANCHOR overwrite dim and interpolation value with pre-factor
     Dimension = f_dimension
     Dim_interpolate = f_dimension_interpolate
 
+    #ANCHOR new radius of interpolated probe
     radius = Dim_interpolate / 2
-    #how many zero pixels will be added in to the new cutted image
+    #ANCHOR how many zero pixels will be added in to the new cutted image
     edge = int(Dimension / 2 - radius)
-    # linear interpolation to dimension of m
+    #ANCHOR linear interpolation to dimension of m
     value_interpolated = Bilinear(value_mat_cut,Dim_interpolate,Dim_interpolate)
-    # add an edge to the beam in freq. distri.
+    #ANCHOR add an edge to the beam in freq. distri.
     value_edged = add_edge(value_interpolated,edge)
 
-    #caluculate f=Aexp(i\phi)
+    #ANCHOR caluculate f=Aexp(i\phi)
     value_f = np.exp((0+1j) * value_edged)
-    #define A as the place of original beam with 1 and outer with zero
+    #ANCHOR define A as the place of original beam with 1 and outer with zero
     value_f = circle(value_f,radius)
 
+    #ANCHOR a hanning window to the dataset
     full_window = np.hanning(value_f.shape[0])[:,None]
     full_window = np.sqrt(np.dot(full_window, full_window.T))**2
     value_f *= full_window
 
-    value_f = np.fft.ifftshift(value_f) #fft and shift to center
-    #ifft, from rec. space to real space
-    value_ifft = np.fft.ifft2(value_f) #fft
-    value_probe_edge = np.fft.fftshift(value_ifft) #fft and shift to center
+    #ANCHOR ifft shift to center
+    value_f = np.fft.ifftshift(value_f) 
+    #ANCHOR ifft, from rec. space to real space
+    value_ifft = np.fft.ifft2(value_f)
+    #ANCHOR fftshift to center
+    value_probe_edge = np.fft.fftshift(value_ifft)
     
+    #SECTION simulate the beam
     if sim_mode:
-        # calculate the fwhm of the beam
+        #ANCHOR calculate the fwhm of the beam
         value_probe_tosimulation = np.abs(value_probe_edge)**2
-
         fwhm_probe_pixels = fwhm(value_probe_tosimulation)
 
-        # simulate the beam
+        #ANCHOR simulate the beam
         simulation(value_probe_tosimulation,radius,fwhm_probe_pixels,mat)
     else:
         pass
+    #!SECTION
 
-    # create a potential
-    potential = gaussV(int(Dimension),rescale_range) #grid of gaussian atoms
+    #ANCHOR create an object potential: grid of gaussian atoms
+    #NOTE gold atom is simulated
+    potential = gaussV(int(Dimension),rescale_range)
 
+    #SECTION apply a defocus mode to illuminate more atoms on specimen
     if defocus_mode:
+
+        #ANCHOR defocus potential using image zoom
+        #NOTE 6 times zoom in
         defocus_V = defocus_potential(potential)
+
+        #SECTION showing defocus image when image mode is on
         if image_mode:
             from matplotlib_scalebar.scalebar import ScaleBar 
             from matplotlib_scalebar.scalebar import SI_LENGTH
-
 
             plt.subplot(121),plt.imshow(np.abs(potential),cmap='jet',interpolation='None',aspect='1'),plt.title('original grid gaussian atoms')
             scalebar1 = ScaleBar(0.0135,'nm', SI_LENGTH)
@@ -164,36 +194,30 @@ def main():
             scalebar2 = ScaleBar(0.0135 * 6,'nm', SI_LENGTH)
             plt.gca().add_artist(scalebar2)
             
-            """
-            fig,axs =  plt.subplots(nrows = 1, ncols = 2,figsize = (12,6))
-
-            axs[0].imshow(np.abs(potential),cmap='jet',interpolation='None',aspect='1')
-            axs[0].set_xlabel('')
-            scalebar1 = ScaleBar(0.0135,'nm', SI_LENGTH)
-            axs[0].add_artist(scalebar1)
-            axs[1].imshow(np.abs(defocus_V),cmap='jet',interpolation='None',aspect='1')
-            axs[1].set_xlabel('defocus grid gaussian atoms')
-            scalebar2 = ScaleBar(0.0135 * 6,'nm', SI_LENGTH)
-            axs[1].add_artist(scalebar2)
-            """
             cax = plt.axes([0.85, 0.1, 0.025, 0.8])
             plt.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
             plt.colorbar(cax=cax)
             plt.show()
+        #!SECTION
             
         potential = defocus_V
+    #!SECTION
 
-    # normalizations
+    #ANCHOR normalizations(sum of each pixel to one) of the probe
     value_probe_scale = uni_complex(value_probe_edge)
-    #potential = uni_complex(potential)
 
+    #REVIEW potential is not necessary to normalize: potential = uni_complex(potential)
+
+    #SECTION replace with a standard beam
     if std_beam_mode:
+        #ANCHOR a exactly same way of init a standard beam from ROP
         from test_psi import standardbeam
         value_probe_scale = standardbeam()
     else:
         pass
+    #!SECTION
 
-    # check probe
+    #SECTION check probe validity
     data_sum = np.sum(np.real(value_probe_scale)**2 + np.imag(value_probe_scale)**2)
     print('sum of probe:'+str(data_sum))
     for i in range(Dimension):
@@ -204,7 +228,9 @@ def main():
             if np.isnan(value_probe_scale[i,j]):
                 print(str(i)+','+str(j)+'is NaN')
                 break
+    #!SECTION
 
+    #ANCHOR store potential values in .bin
     bin_pack(potential,'Potential')
 
     if tif_mode:
@@ -406,6 +432,7 @@ def main():
             pass
     except:
         pass
+#!SECTION
 
 def wrap_artifact(value):
     radius = int( len(value)/2 )
@@ -600,6 +627,7 @@ def defocus_potential(value):
 
     return result
 
+#SECTION program entrance
 if __name__ == "__main__":
     if loop_mode:
         mat_list = ['-.-.-.+','-.-.+.+']
@@ -616,3 +644,4 @@ if __name__ == "__main__":
                 main()
     else:
         main()
+#!SECTION
