@@ -233,116 +233,113 @@ def main():
     #ANCHOR store potential values in .bin
     bin_pack(potential,'Potential')
 
+    #SECTION store probe values
+    #SECTION in .tiff image format
+    #NOTE since .bin problem is fixed, tif mode is no longer a recommend.
     if tif_mode:
+
+        #ANCHOR separate complex probe values into real and imag part.
         value_probe_real = np.real(value_probe_scale)
         value_probe_imag = np.imag(value_probe_scale)
 
+        #ANCHOR import tif denpendency and store value as tif image
+        #NOTE a strength constant is used,e.g., 10000 here, when creating tif image, and using uint32 format as default.
         from PIL import Image
         imreal = Image.fromarray((value_probe_real * 10000).astype(np.uint32))
         imreal.save('bin/Probe_'+str(mat)+'_'+str(rotation)+'_re.tif')
-
         imimag = Image.fromarray((value_probe_imag * 10000).astype(np.uint32))
         imimag.save('bin/Probe_'+str(mat)+'_'+str(rotation)+'_im.tif')
 
-        imread_real = Image.open('bin/Probe_'+str(mat)+'_'+str(rotation)+'_re.tif')
+        #ANCHOR to make sure tif images are saving correctly, as well as using them as probes in following processes.
+        imread_real =  Image.open('bin/Probe_'+str(mat)+'_'+str(rotation)+'_re.tif')
         imarray_real = np.array(imread_real).astype(np.int32)
-
         imread_imag = Image.open('bin/Probe_'+str(mat)+'_'+str(rotation)+'_im.tif')
         imarray_imag = np.array(imread_imag).astype(np.int32)
 
+        #ANCHOR recombine complex value and normalize value(the 10000 multiplicity above is now eliminated)
         imarray = imarray_real + imarray_imag * 1j
-        
         imarray = uni_complex(imarray)
+        #ANCHOR restore the probe value
         value_probe_scale = imarray
 
         try:
+            #ANCHOR in tif mode, all probe saved as .bin will be deleted, additionally in loop mode, all tif image will be renamed for ROP usage.
             os.system('rm bin/Probe*.bin')
 
             os.system('cp bin/Probe_-.+.-.+_0_re.tif bin/Probe0_re.tif')
             os.system('cp bin/Probe_-.+.-.+_0_im.tif bin/Probe0_im.tif')
 
-
             os.system('cp bin/Probe_-.-.-.+_0_re.tif bin/Probe1_re.tif')
             os.system('cp bin/Probe_-.-.-.+_0_im.tif bin/Probe1_im.tif')
-
             os.system('cp bin/Probe_-.-.-.+_-1_re.tif bin/Probe2_re.tif')
             os.system('cp bin/Probe_-.-.-.+_-1_im.tif bin/Probe2_im.tif')
-    
             os.system('cp bin/Probe_-.-.-.+_-2_re.tif bin/Probe3_re.tif')
             os.system('cp bin/Probe_-.-.-.+_-2_im.tif bin/Probe3_im.tif')
-
             os.system('cp bin/Probe_-.-.-.+_-3_re.tif bin/Probe4_re.tif')
             os.system('cp bin/Probe_-.-.-.+_-3_im.tif bin/Probe4_im.tif')
 
-
             os.system('cp bin/Probe_-.-.+.+_0_re.tif bin/Probe5_re.tif')
             os.system('cp bin/Probe_-.-.+.+_0_im.tif bin/Probe5_im.tif')
-
             os.system('cp bin/Probe_-.-.+.+_-1_re.tif bin/Probe6_re.tif')
             os.system('cp bin/Probe_-.-.+.+_-1_im.tif bin/Probe6_im.tif')
-
             os.system('cp bin/Probe_-.-.+.+_-2_re.tif bin/Probe7_re.tif')
             os.system('cp bin/Probe_-.-.+.+_-2_im.tif bin/Probe7_im.tif')
-
             os.system('cp bin/Probe_-.-.+.+_-3_re.tif bin/Probe8_re.tif')
             os.system('cp bin/Probe_-.-.+.+_-3_im.tif bin/Probe8_im.tif')
         except:
             pass
+    #!SECTION
+    #SECTION in .bin file format
     else:
+        #ANCHOR convert all probes into individual .bin file.
         bin_pack(value_probe_scale,'Probe_'+str(mat)+'_'+str(rotation))
 
         try:
+            #ANCHOR in bin mode, all tif images are deleted
             os.system('rm -rf bin/*.tif')
 
             os.system('cp bin/Probe_-.+.-.+_0_re.bin bin/Probe0_re.bin')
             os.system('cp bin/Probe_-.+.-.+_0_im.bin bin/Probe0_im.bin')
 
-
             os.system('cp bin/Probe_-.-.-.+_0_re.bin bin/Probe1_re.bin')
             os.system('cp bin/Probe_-.-.-.+_0_im.bin bin/Probe1_im.bin')
-
             os.system('cp bin/Probe_-.-.-.+_-1_re.bin bin/Probe2_re.bin')
             os.system('cp bin/Probe_-.-.-.+_-1_im.bin bin/Probe2_im.bin')
-    
             os.system('cp bin/Probe_-.-.-.+_-2_re.bin bin/Probe3_re.bin')
             os.system('cp bin/Probe_-.-.-.+_-2_im.bin bin/Probe3_im.bin')
-
             os.system('cp bin/Probe_-.-.-.+_-3_re.bin bin/Probe4_re.bin')
             os.system('cp bin/Probe_-.-.-.+_-3_im.bin bin/Probe4_im.bin')
 
-
             os.system('cp bin/Probe_-.-.+.+_0_re.bin bin/Probe5_re.bin')
             os.system('cp bin/Probe_-.-.+.+_0_im.bin bin/Probe5_im.bin')
-
             os.system('cp bin/Probe_-.-.+.+_-1_re.bin bin/Probe6_re.bin')
             os.system('cp bin/Probe_-.-.+.+_-1_im.bin bin/Probe6_im.bin')
-
             os.system('cp bin/Probe_-.-.+.+_-2_re.bin bin/Probe7_re.bin')
             os.system('cp bin/Probe_-.-.+.+_-2_im.bin bin/Probe7_im.bin')
-
             os.system('cp bin/Probe_-.-.+.+_-3_re.bin bin/Probe8_re.bin')
             os.system('cp bin/Probe_-.-.+.+_-3_im.bin bin/Probe8_im.bin')
         except:
             pass
+    #!SECTION
 
-    # diffaction
+    #ANCHOR create diffaction pattern, using fft and fftshift, check book
     diffraction_full = np.abs( np.fft.fft2( np.exp((0+1j) * potential) * value_probe_scale ) )**2
     diffraction_full = np.fft.fftshift(diffraction_full)
 
-    # avoid wraparound artifacts
-    #outside 2/3 set to zero
-    #radius of 2/3 circle
+    #ANCHOR remove wrap-around artifacts: idea is to zero the outside 2/3 place, and resize the pattern using 2/3(i.e. m144->n96) of dim.
     centroide = int( len(diffraction_full)/2 )
     radius_23 = int( len(diffraction_full)/3 )
     diffraction_23_full = diffraction_full[centroide-radius_23:centroide+radius_23,centroide-radius_23:centroide+radius_23] # n2
     diffraction_23 = wrap_artifact(diffraction_23_full)
 
+    #ANCHOR normalize the pattern
+    #NOTE pattern only includes real part, so here only the real part is normalized!
     diffraction_23 = uni_complex_real(diffraction_23)
-
+    #ANCHOR check if the pattern is correctly normalized
     diff_sum = np.sum(np.real(diffraction_23))
     print('sum of diffraction:'+str(diff_sum))
 
-    # store diffraction into bin file
+    #ANCHOR store diffraction patterns into bin file
     bin_pack(diffraction_23,'Diffraction_'+str(mat)+'_'+str(rotation))
 
 
