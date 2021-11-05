@@ -1,7 +1,8 @@
 #########################################
 #ANCHOR Python script for Master Thesis
-#Determining Regularization and Simulating the Electron Beam in Non-translational Ptychography
-#Guangyu He 
+#Thesis Title: Determining Regularization and Simulating the Electron Beam in Non-translational Ptychography
+#Author: Guangyu He@HU Berlin
+#ANCHOR main script
 #########################################
 
 #ANCHOR import python packages

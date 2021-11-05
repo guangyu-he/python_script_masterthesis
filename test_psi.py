@@ -1,3 +1,10 @@
+#########################################
+#ANCHOR Python script for Master Thesis
+#Thesis Title: Determining Regularization and Simulating the Electron Beam in Non-translational Ptychography
+#Author: Guangyu He@HU Berlin, Marcel Scholz@HU Berlin
+#ANCHOR sub script for providing a standard test beam
+#########################################
+
 import numpy as np
 from matplotlib import pyplot as plt
 
