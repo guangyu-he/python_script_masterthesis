@@ -19,7 +19,7 @@ def pre_simulation(inten,radius,width_pix,mat):
 
     lam = 0.004866 #nm
 
-    f = open("pre_width_info_"+mat+".txt", 'w+')
+    f = open("logs/pre_width_info_"+mat+".txt", 'w+')
 
     half_diver_ang = 40 #normally in aperture, the radius is 40 mrad
     print("half divergence angle in Rec. space:" + str(half_diver_ang) + " mrad",file=f)
@@ -87,7 +87,7 @@ def simulation(inten,radius,width_pix,mat):
 
     lam = 0.004866 #nm
 
-    f = open("width_info_"+mat+".txt", 'w+')
+    f = open("logs/width_info_"+mat+".txt", 'w+')
 
     half_diver_ang = 40 #normally in aperture, the radius is 40 mrad
     print("half divergence angle in Rec. space:" + str(half_diver_ang) + " mrad",file=f)

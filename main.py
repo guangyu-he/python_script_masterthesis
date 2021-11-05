@@ -73,7 +73,7 @@ def main():
     """
 
     #ANCHOR load .mat file(in freq. distri.)
-    value_mat = loadmat('quad'+mat+'pix256.mat')
+    value_mat = loadmat('mat/quad'+mat+'pix256.mat')
 
     #ANCHOR add a rotation
     value_mat = np.rot90(value_mat,rotation)
