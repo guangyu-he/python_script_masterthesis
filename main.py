@@ -60,7 +60,7 @@ atom_distance = 34 #STUB define atom distance for simulated object potential, de
 rescale_range = math.pi / 4 #STUB define the normalization factor of the total gaussian potential, different value may have effect in diffraction scattering, default: math.pi / 4
 
 #ANCHOR force dimension and interpolation value in program
-#STUB two values are adjusted for all 9 probes
+#NOTE two values are adjusted for all 9 probes
 f_dimension = 144
 f_dimension_interpolate = 32
 #!SECTION
@@ -288,10 +288,12 @@ def main():
             os.system('cp bin/Probe_-.-.+.+_-3_im.tif bin/Probe8_im.tif')
         except:
             pass
-    #!SECTION
+        #!SECTION
+    
     #SECTION in .bin file format
     else:
         #ANCHOR convert all probes into individual .bin file.
+        #NOTE if loop mode is disabled, only the selected probe will be stored, while rest of probes will using the stored bins. 
         bin_pack(value_probe_scale,'Probe_'+str(mat)+'_'+str(rotation))
 
         try:
@@ -321,6 +323,7 @@ def main():
         except:
             pass
     #!SECTION
+#!SECTION
 
     #ANCHOR create diffaction pattern, using fft and fftshift, check book
     diffraction_full = np.abs( np.fft.fft2( np.exp((0+1j) * potential) * value_probe_scale ) )**2
@@ -342,7 +345,7 @@ def main():
     #ANCHOR store diffraction patterns into bin file
     bin_pack(diffraction_23,'Diffraction_'+str(mat)+'_'+str(rotation))
 
-
+    #SECTION imaging mode
     if image_mode:
         plt.clf()
         plt.title('beam in Rec. Space')
@@ -398,7 +401,9 @@ def main():
         plt.show()
     else:
         pass
+    #!SECTION
 
+    #SECTION create probe bundle for ROP
     try:
         os.system('cp bin/Diffraction_-.+.-.+_0_re.bin bin/dps0.bin')
         os.system('cp bin/Diffraction_-.-.-.+_0_re.bin bin/dps1.bin')
@@ -429,91 +434,107 @@ def main():
             pass
     except:
         pass
-#!SECTION
+    #!SECTION
 
+#SECTION function: remove wraparound artifact
 def wrap_artifact(value):
+    """
+    removing wraparound artifact, returns the central disk with 2/3 of dim.
+    """
     radius = int( len(value)/2 )
     value_wrap = circle(value,radius)
     return value_wrap
+#!SECTION
 
+#SECTION functions: data normalization
 def uni_complex(data):
     """
-    normalization the data
+    returns normalized complex data
     """
     data /= np.sqrt( np.sum( np.real(data) * np.real(data)) + np.sum( np.imag(data) * np.imag(data)) ) 
     return data
 
 def uni_complex_real(data):
     """
-    normalization the data
+    returns normalized real data
     """
     print(np.sum(data))
     data /= np.sum(data)
     return data
+#!SECTION
 
+#SECTION function: create gaussian atoms
 def gaussV(Dimension,rescale_range):
     """
-    create the object potential with a grid gauss atom
+    creates and returns the object potential with a grid gauss atom
     """
 
-    from scipy import signal
-
-    dimension = 144#atom_distance
-
-    #Create grid with ones
+    #ANCHOR Create grid with ones
     ones = np.zeros((Dimension,Dimension))
     ones[::atom_distance, ::atom_distance] = 1.0
 
-    #Create gaussian shaped atom
+    #ANCHOR Create gaussian shaped atom
     sigma = 6
     center = int(Dimension / 2)
     gaus = np.zeros_like(ones)
-
-    for x in range(dimension):
-        for y in range(dimension):
+    for x in range(Dimension):
+        for y in range(Dimension):
             gaus[x,y] = (1/(2*np.pi*sigma**2)) * np.exp( - (1 / 2) * ( ( (x - center) / sigma)**2 + ( ( y - center) / sigma )**2 ) )
-            #gaus[x,y] = 0
+            #STUB test function: gaus[x,y] = 0
 
-    #Fourier transform of both arrays
-    #f_ones = np.fft.fft2(ones)
-    #f_gaus = np.fft.fft2(gaus)
-    #ifft( fft(array1) x fft(array2) )
-    #combined = np.fft.ifft2(f_ones * f_gaus)
+    #ANCHOR convolve operation using FFT
+    #REVIEW probably not correct, since it didn't test since the scipy method is used
+    """
+    f_ones = np.fft.fft2(ones)
+    f_gaus = np.fft.fft2(gaus)
+    ifft( fft(array1) x fft(array2) )
+    combined = np.fft.ifft2(f_ones * f_gaus)
+    """
 
+    #ANCHOR convolve operation using scipy dependency
+    from scipy import signal
     combined = signal.fftconvolve(ones, gaus, mode='same')
 
-    #plt.subplot(1,3,1),plt.imshow(np.abs(ones),cmap='jet',interpolation='None',aspect='1')
-    #plt.subplot(1,3,2),plt.imshow(np.abs(gaus),cmap='jet',interpolation='None',aspect='1')
-    #plt.subplot(1,3,3),plt.imshow(np.abs(combined),cmap='jet',interpolation='None',aspect='1')
-    #plt.show()
+    #ANCHOR showing the process of convolving
+    """
+    if image_mode:
+        plt.figure()
+        plt.subplot(1,3,1),plt.imshow(np.abs(ones),cmap='jet',interpolation='None',aspect='1')
+        plt.subplot(1,3,2),plt.imshow(np.abs(gaus),cmap='jet',interpolation='None',aspect='1')
+        plt.subplot(1,3,3),plt.imshow(np.abs(combined),cmap='jet',interpolation='None',aspect='1')
+        plt.show()
+    else:
+        pass
+    """
 
+    #ANCHOR unification of potential, from 0 to rescale_range
     combined = unification_interval(combined,0,rescale_range)
-
-    ones = np.ones((Dimension,Dimension))
+    #STUB test function: ones = np.ones((Dimension,Dimension))
 
     return combined
+#!SECTION
 
-
+#SECTION function: load .mat files
 def loadmat(mat):
     """
-    load the .mat file, and return a numpy array with unification to [-pi,pi]
+    load the .mat file, returns a numpy array with unification to [-pi,pi]
     """
     import scipy.io as sio
 
-    #convert the image data from mat to numpy
+    #ANCHOR convert the image data from mat to numpy
     data = sio.loadmat(mat)
-    #print(type(data)) #return the type of the data: dict
-    #print(data.keys()) #return the key of the data: here f is storing the data of the image
     value = np.transpose(data['f']) 
 
-    #rescale between -pi to pi
+    #ANCHOR rescale between -pi to pi
     value = unification_interval(value,-math.pi,math.pi) 
 
     return value
+#!SECTION
 
+#SECTION function: unification
 def unification_interval(data,interval_min,interval_max):
     """
-    return a rescaled  data
+    returns a rescaled  data
     """
 
     # data         ：需要变换的数据或矩阵
@@ -527,10 +548,12 @@ def unification_interval(data,interval_min,interval_max):
         for j in range(m):
             data[i,j] = (data[i,j]-minval)/(maxval-minval)
     return data*(interval_max-interval_min)+interval_min
+#!SECTION
 
+#SECTION function: extend the image with zeros
 def add_edge(value,width):
     """
-    adding zeros to each side of the image
+    returns extending dimension of image with zeros, value: old image, width: extending dim on one side
     """
 
     value_size = np.size(value,0)
@@ -543,11 +566,23 @@ def add_edge(value,width):
     new = np.append(back1,new,axis=1) # new_size,width+size
     new = np.append(new,back1,axis=1) # new_size,width+size+width
 
-    #plot_image(new,'widened image')
+    #ANCHOR showing the result of widened image
+    """
+    if image_mode:
+        plot_image(new,'widened image')
+    else:
+        pass
+    """
 
     return new
+#!SECTION
 
+#SECTION function: cut out central disk
 def circle(value,radius):
+    """
+    returns a image with a radius central disk cutted out
+    """
+
     dim = len(value)
     # xx and yy are 200x200 tables containing the x and y coordinates as values
     # mgrid is a mesh creation helper
@@ -570,8 +605,14 @@ def circle(value,radius):
     output = value * a
 
     return output
+#!SECTION
 
+#SECTION function: cut out central disk with central disk equals one
 def circle_one(value,radius):
+    """
+    returns a image with a radius central disk with value one cutted out
+    """
+
     dim = len(value)
     # xx and yy are 200x200 tables containing the x and y coordinates as values
     # mgrid is a mesh creation helper
@@ -591,12 +632,15 @@ def circle_one(value,radius):
             else:
                 pass
     
-    output = value * a
-    
-
     return a
+#!SECTION
 
+#SECTION function: linear interpolation
 def Bilinear( img, bigger_height, bigger_width):
+    """
+    returns blinear interpolation
+    """
+
     bilinear_img = np.zeros( shape = ( bigger_height, bigger_width))
     
     for i in range( 0, bigger_height ):
@@ -614,8 +658,9 @@ def Bilinear( img, bigger_height, bigger_width):
             bilinear_img[i][j] = (1-u)*(1-v) *img[row_int][col_int] + (1-u)*v*img[row_int][col_int+1] + u*(1-v)*img[row_int+1][col_int] + u*v*img[row_int+1][col_int+1]
             
     return bilinear_img
+#!SECTION
 
-
+#SECTION function: defocus potential using zoom
 def defocus_potential(value):
     from scipy import ndimage, misc
 
@@ -623,6 +668,7 @@ def defocus_potential(value):
     result = add_edge(result,60)
 
     return result
+#!SECTION
 
 #SECTION program entrance
 if __name__ == "__main__":
