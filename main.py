@@ -26,9 +26,10 @@ std_beam_mode = False #STUB replace Grillo's probe into standard beam, default: 
 
 defocus_mode = True #STUB using defocus gaussian potential, default: True
 
-loop_mode = False #STUB loop all 9 probes for creating rop data, default: False
+loop_mode = True #STUB loop all 9 probes for creating rop data, default: False
 
 if loop_mode:   #ANCHOR in loop mode, image mode is False by default
+    savefig_mode = True #STUB saving image, default: False
     image_mode = False 
     pass
 else:   #ANCHOR if not in loop mode, one needs to specify mat probe and rotation
@@ -77,6 +78,20 @@ def main():
 
     #ANCHOR add a rotation
     value_mat = np.rot90(value_mat,rotation)
+    
+    #SECTION saving electrode configuration images when savefig_mode is on
+    if savefig_mode:
+        plt.figure()
+        plt.clf()
+        plt.imshow(np.abs(value_mat),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        cb = plt.colorbar()
+        plt.title('electrode configuration '+mat+str(rotation))
+
+        plt.savefig('fig/ec'+mat+str(rotation)+'.png', bbox_inches='tight')
+        #return 
+    else:
+        pass
+    #!SECTION
 
     #ANCHOR cut the beam from phase plate
     #STUB default center out of 256x256 is [128,128]
@@ -140,6 +155,25 @@ def main():
     edge = int(Dimension / 2 - radius)
     #ANCHOR linear interpolation to dimension of m
     value_interpolated = Bilinear(value_mat_cut,Dim_interpolate,Dim_interpolate)
+
+    #SECTION saving beam central disk images when savefig_mode is on
+    if savefig_mode:
+        plt.figure()
+        plt.clf()
+        plt.subplot(121),plt.imshow(np.real(value_mat_cut),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        plt.title('beam central disk ' + str(radius_mat*2) + 'px')
+        cb = plt.colorbar(fraction=0.046, pad=0.04)
+        plt.subplot(122),plt.imshow(np.real(value_interpolated),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        plt.title('interpolated b.c.d ' + str(Dim_interpolate) + 'px')
+        cb = plt.colorbar(fraction=0.046, pad=0.04)
+        
+        plt.tight_layout()
+        plt.savefig('fig/bcd'+mat+str(rotation)+'.png', bbox_inches='tight')
+        #return
+    else:
+        pass
+    #!SECTION
+
     #ANCHOR add an edge to the beam in freq. distri.
     value_edged = add_edge(value_interpolated,edge)
 
@@ -159,6 +193,35 @@ def main():
     value_ifft = np.fft.ifft2(value_f)
     #ANCHOR fftshift to center
     value_probe_edge = np.fft.fftshift(value_ifft)
+
+    #SECTION saving probe images when savefig_mode is on
+    if savefig_mode:
+        from matplotlib_scalebar.scalebar import ScaleBar 
+        from matplotlib_scalebar.scalebar import SI_LENGTH
+        
+        plt.figure()
+        plt.clf()
+        plt.subplot(221),plt.imshow(np.real(value_interpolated),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        plt.title('interpolated b.c.d ' + str(Dim_interpolate) + 'px')
+        cb = plt.colorbar()
+        plt.subplot(222),plt.imshow(np.real(value_edged),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        plt.title('uncutted probe rec. ' + str(Dimension) + 'px')
+        cb = plt.colorbar()
+        plt.subplot(223),plt.imshow(np.fft.fftshift(np.real(value_f)),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        plt.title('probe rec. ' + str(Dimension) + 'px')
+        cb = plt.colorbar()
+        plt.subplot(224),plt.imshow(np.abs(value_probe_edge),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        plt.title('probe real ' + str(Dimension) + 'px')
+        cb = plt.colorbar()
+        scalebar1 = ScaleBar(0.0135,'nm', SI_LENGTH)
+        plt.gca().add_artist(scalebar1)
+
+        plt.tight_layout()
+        plt.savefig('fig/probe'+mat+str(rotation)+'.png', bbox_inches='tight')
+        #return
+    else:
+        pass
+    #!SECTION
     
     #SECTION simulate the beam
     if sim_mode:
@@ -220,7 +283,7 @@ def main():
 
     #SECTION check probe validity
     data_sum = np.sum(np.real(value_probe_scale)**2 + np.imag(value_probe_scale)**2)
-    print('sum of probe:'+str(data_sum))
+    #print('sum of probe:'+str(data_sum))
     for i in range(Dimension):
         for j in range(Dimension):
             if (np.abs(value_probe_scale[i,j]) < 0):
@@ -341,7 +404,40 @@ def main():
     diffraction_23 = uni_complex_real(diffraction_23)
     #ANCHOR check if the pattern is correctly normalized
     diff_sum = np.sum(np.real(diffraction_23))
-    print('sum of diffraction:'+str(diff_sum))
+    #print('sum of diffraction:'+str(diff_sum))
+
+    if savefig_mode:
+        from matplotlib_scalebar.scalebar import ScaleBar 
+        from matplotlib_scalebar.scalebar import SI_LENGTH
+
+        plt.figure()
+        plt.clf()
+        plt.subplot(221),plt.imshow(np.log(diffraction_full),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        plt.title('diffraction log ' + str(Dimension) + 'px')
+        cb = plt.colorbar()
+        scalebar1 = ScaleBar(0.0135,'nm', SI_LENGTH)
+        plt.gca().add_artist(scalebar1)
+        plt.subplot(222),plt.imshow(np.log(diffraction_23_full),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        plt.title('diffraction_2/3 log ' + str(radius_23 * 2) + 'px')
+        cb = plt.colorbar()
+        scalebar2 = ScaleBar(0.0135,'nm', SI_LENGTH)
+        plt.gca().add_artist(scalebar2)
+        plt.subplot(223),plt.imshow(np.log(diffraction_23),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        plt.title('diffraction_2/3_wrap log ' + str(radius_23 * 2) + 'px')
+        cb = plt.colorbar()
+        scalebar3 = ScaleBar(0.0135,'nm', SI_LENGTH)
+        plt.gca().add_artist(scalebar3)
+        plt.subplot(224),plt.imshow(np.real(diffraction_23),cmap='jet',interpolation='None',aspect='1')#,vmin=0.4, vmax=1) #
+        plt.title('diffraction_2/3_wrap ' + str(radius_23 * 2) + 'px')
+        cb = plt.colorbar()
+        scalebar4 = ScaleBar(0.0135,'nm', SI_LENGTH)
+        plt.gca().add_artist(scalebar4)
+        
+        plt.tight_layout()
+        plt.savefig('fig/diffraction'+mat+str(rotation)+'.png', bbox_inches='tight')
+        return
+    else:
+        pass
 
     #ANCHOR store diffraction patterns into bin file
     bin_pack(diffraction_23,'Diffraction_'+str(mat)+'_'+str(rotation))
@@ -459,7 +555,7 @@ def uni_complex_real(data):
     """
     returns normalized real data
     """
-    print(np.sum(data))
+    #print(np.sum(data))
     data /= np.sum(data)
     return data
 #!SECTION
